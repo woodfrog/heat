@@ -1,0 +1,10 @@
+data
+.DS_Store
+viz/*
+*.tar
+*.pdf
+svg_*
+*.html
+checkpoints
+qualitative
+__pycache__
