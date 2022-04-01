@@ -37,11 +37,11 @@ python infer.py
 
 ## Run the training
 
-In ```train.py```, set up the paths for saving intermediate training results and checkpoints, as well as the input image resolution, then run:
+In ```train.py```, set up the paths for saving intermediate training results and checkpoints, as well as the input image resolution, run:
 
 ```
-CUDA_VISIBLE_DEVICES={gpu_ids} python train.py
+CUDA_VISIBLE_DEVICES={gpu_ids} python train.py  --output_dir {ckpts_output_dir}
 ```
 
-With the default batch size, we need at least 2 GPUs with >10GB memory. 
+With the default setting (e.g., model setup, batch size, etc.), training the full HEAT (i.e., the end-to-end corner and edge modules) needs at least 2 GPUs with >15GB memory each. 
 

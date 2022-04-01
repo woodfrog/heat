@@ -81,7 +81,7 @@ def get_args_parser():
     parser.add_argument('--coco_panoptic_path', type=str)
     parser.add_argument('--remove_difficult', action='store_true')
 
-    parser.add_argument('--output_dir', default='./ckpts_joint_primtrans_2b_mpm_v2_256_2',
+    parser.add_argument('--output_dir', default='./ckpts_heat_256',
                         help='path where to save, empty for no saving')
     parser.add_argument('--corner_model', default='unet',
                         help='path where to save, empty for no saving')
@@ -94,11 +94,6 @@ def get_args_parser():
                         help='start epoch')
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--num_workers', default=2, type=int)
-
-    # distributed training parameters
-    parser.add_argument('--world_size', default=1, type=int,
-                        help='number of distributed processes')
-    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     return parser
 
 
@@ -251,7 +246,7 @@ def main(args):
     test_dataset = BuildingCornerDataset(DATAPATH, DET_PATH, phase='valid', image_size=image_size, rand_aug=False,
                                          training_split=None, inference=False)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=8,
+    train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=8,
                                   collate_fn=collate_fn_corner, drop_last=True)
     test_dataloader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=4,
                                  collate_fn=collate_fn_corner)
