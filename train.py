@@ -31,7 +31,6 @@ def train_one_epoch(image_size, backbone, corner_model, edge_model, corner_crite
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = args.print_freq
 
-    
     # get the positional encodings for all pixels
     pixels, pixel_features = get_pixel_features(image_size)
     pixel_features = pixel_features.cuda()
@@ -114,8 +113,8 @@ def run_model(data, pixels, pixel_features, backbone, corner_model, edge_model, 
                                                                                            edge_labels, edge_lengths,
                                                                                            edge_mask, s2_gt_values)
 
-    return c_outputs, corner_loss_s1, corner_recall, logits_s1, logits_s2_hb, logits_s2_rel, s1_losses, \
-           s2_losses_hb, s2_losses_rel, s1_acc, s2_acc_hb, s2_acc_rel
+    return c_outputs, corner_loss_s1, corner_recall, logits_s1, logits_s2_hb, logits_s2_rel, s1_losses, s2_losses_hb, \
+            s2_losses_rel, s1_acc, s2_acc_hb, s2_acc_rel
 
 
 @torch.no_grad()

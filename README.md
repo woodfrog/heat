@@ -1,6 +1,6 @@
 # HEAT: Holistic Edge Attention Transformer for Structured Reconstruction 
 
-<img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=PyTorch&logoColor=white" width="8%" /> [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) 
+<img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=PyTorch&logoColor=white" width="9%" /> [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) 
 
 Official implementation of the paper [HEAT: Holistic Edge Attention Transformer for Structured Reconstruction](https://arxiv.org/abs/2111.15143) (**CVPR 2022**).
 
@@ -133,13 +133,25 @@ We provide the instructions to run the inference, quantitative evaluation, and q
 
 ## Training
 
-In ```train.py```, set up the paths for saving intermediate training results and checkpoints, as well as the input image resolution, run:
+Set up the training arguments in ```arguments.py```, and then run the training by:
 
 ```
-CUDA_VISIBLE_DEVICES={gpu_ids} python train.py  --output_dir {ckpts_output_dir}
+CUDA_VISIBLE_DEVICES={gpu_ids} python train.py
 ```
 
-With the default setting (e.g., model setup, batch size, etc.), training the full HEAT (i.e., the end-to-end corner and edge modules) needs at least 2 GPUs with >15GB memory each. 
+Or specify the key arguments in the command line and run the outdoor experiment by:
+
+```
+CUDA_VISIBLE_DEVICES={gpu_ids} python train.py  --exp_dataset outdoor  --epochs 800 --lr_drop 600  --batch_size 16  --output_dir ./checkpoints/ckpts_heat_outdoor_256  --image_size 256  --max_corner_num 150  --lambda_corner 0.05  --run_validation
+```
+
+or run the s3d floorplan experiment by:
+
+```
+CUDA_VISIBLE_DEVICES={gpu_ids} python train.py  --exp_dataset s3d_floorplan  --epochs 400 --lr_drop 300  --batch_size 16  --output_dir ./checkpoints/ckpts_heat_s3d_256  --image_size 256  --max_corner_num 200  --lambda_corner 0.10  --run_validation
+```
+
+With the default setting (e.g., model setup, batch size, etc.), training the full HEAT (i.e., the end-to-end corner and edge modules) needs at least 2 GPUs with ~16GB memory each. 
 
 
 
