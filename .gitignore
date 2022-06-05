@@ -12,3 +12,4 @@ models/ops/*egg-info
 __pycache__
 results
 montefloor_data
+.idea
