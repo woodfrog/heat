@@ -79,6 +79,10 @@ We provide the checkpoints for our full method under [this link](https://drive.g
 
 ## Inference, evaluation, and visualization
 
+We provide the instructions to run the inference, quantitative evaluation, and qualitative visualization in this section.
+
+### Inference
+
 In ```infer.py```, set up the checkpoint path and the corresponding image resolution, then run:
 
 ```

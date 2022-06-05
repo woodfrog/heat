@@ -16,6 +16,7 @@ import scipy.ndimage.filters as filters
 import matplotlib.pyplot as plt
 from metrics.get_metric import compute_metrics, get_recall_and_precision
 import skimage
+import argparse
 
 
 def visualize_cond_generation(positive_pixels, confs, image, save_path, gt_corners=None, prec=None, recall=None,
@@ -172,7 +173,8 @@ def main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times):
                                                                                         corner_model,
                                                                                         edge_model,
                                                                                         pixels, pixel_features,
-                                                                                        ckpt_args, infer_times, corner_thresh=0.01,
+                                                                                        ckpt_args, infer_times,
+                                                                                        corner_thresh=0.01,
                                                                                         image_size=image_size)
 
         # viz_image = cv2.imread(img_path)
@@ -297,7 +299,7 @@ def get_results(image, annot, backbone, corner_model, edge_model, pixels, pixel_
                                                                                                  gt_values, corner_nums,
                                                                                                  max_candidates,
                                                                                                  True)
-                                                                                                 #do_inference=True)
+        # do_inference=True)
 
         num_total = s1_logits.shape[2]
         num_selected = selected_ids.shape[1]
@@ -335,17 +337,12 @@ def get_results(image, annot, backbone, corner_model, edge_model, pixels, pixel_
             s2_preds_np = s2_preds_hb_np
 
             pos_edge_ids = np.where(s2_preds_np >= 0.5)
-            # pos_edge_ids = np.where(s1_preds_np >= 0.5)
             for pos_id in pos_edge_ids[0]:
                 actual_id = selected_ids[pos_id]
                 if s2_mask[0][pos_id] is True or gt_values[0, actual_id] != 2:
                     continue
                 all_pos_ids.add(actual_id)
                 all_edge_confs[actual_id] = s2_preds_np[pos_id]
-                # if gt_values[0, pos_id] != 2:
-                #    continue
-                # all_pos_ids.add(pos_id)
-                # all_edge_confs[pos_id] = s1_preds_np[pos_id]
 
     # print('Inference time {}'.format(tt+1))
     pos_edge_ids = list(all_pos_ids)
@@ -428,12 +425,24 @@ def convert_annot(annot):
     return gt_data
 
 
+def get_args_parser():
+    parser = argparse.ArgumentParser('Holistic edge attention transformer', add_help=False)
+    parser.add_argument('--dataset', default='outdoor',
+                        help='the dataset for experiments, outdoor/s3d_floorplan')
+    parser.add_argument('--image_size', default=256, type=int)
+    parser.add_argument('--checkpoint_path', default='',
+                        help='path to the checkpoints of the model')
+    parser.add_argument('--image_size', default=256, type=int)
+    parser.add_argument('--viz_base', default='./results/viz',
+                        help='path to save the intermediate visualizations')
+    parser.add_argument('--save_base', default='./results/npy',
+                        help='path to save the prediction results in npy files')
+    parser.add_argument('--infer_times', default=3, type=int)
+    return parser
+
+
 if __name__ == '__main__':
-    ckpt_path = './checkpoints/ckpts_heat_s3d_256/checkpoint.pth'
-    #ckpt_path = './checkpoints/ckpts_heat_outdoor_256/checkpoint.pth'
-    #ckpt_path = './checkpoints/ckpts_heat_outdoor_512/checkpoint.pth'
-    image_size = 256
-    dataset = 's3d_floorplan'
-    viz_base = './results/viz_s3d_test_256'
-    save_base = './results/npy_s3d_test_256'
-    main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times=3)
+    parser = argparse.ArgumentParser('HEAT inference', parents=[get_args_parser()])
+    args = parser.parse_args()
+    main(args.dataset, args.checkpoint_path, args.image_size, args.viz_base, args.save_base,
+         infer_times=args.infer_times)
