@@ -197,8 +197,12 @@ def main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times):
         if pred_confs.shape[0] == 0:
             pred_confs = None
 
+        if image_size != 256:
+            pred_corners_viz = pred_corners * (image_size / 256)
+        else:
+            pred_corners_viz = pred_corners
         recon_path = os.path.join(viz_base, '{}_pred_corner.png'.format(data_i))
-        visualize_cond_generation(pred_corners, pred_confs, viz_image, recon_path, gt_corners=None, prec=prec,
+        visualize_cond_generation(pred_corners_viz, pred_confs, viz_image, recon_path, gt_corners=None, prec=prec,
                                   recall=recall)
 
         pred_corners, pred_confs, pos_edges = postprocess_preds(pred_corners, pred_confs, pos_edges)
@@ -231,8 +235,12 @@ def main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times):
         er_recall = (edge_recall, region_recall)
         er_prec = (edge_prec, region_prec)
 
+        if image_size != 256:
+            pred_corners_viz = pred_corners * (image_size / 256)
+        else:
+            pred_corners_viz = pred_corners
         recon_path = os.path.join(viz_base, '{}_pred_edge.png'.format(data_i))
-        visualize_cond_generation(pred_corners, pred_confs, viz_image, recon_path, gt_corners=None, prec=er_prec,
+        visualize_cond_generation(pred_corners_viz, pred_confs, viz_image, recon_path, gt_corners=None, prec=er_prec,
                                   recall=er_recall, edges=pos_edges, edge_confs=edge_confs)
         corner_tp += score['corner_tp']
         corner_fp += score['corner_fp']
@@ -429,7 +437,6 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Holistic edge attention transformer', add_help=False)
     parser.add_argument('--dataset', default='outdoor',
                         help='the dataset for experiments, outdoor/s3d_floorplan')
-    parser.add_argument('--image_size', default=256, type=int)
     parser.add_argument('--checkpoint_path', default='',
                         help='path to the checkpoints of the model')
     parser.add_argument('--image_size', default=256, type=int)

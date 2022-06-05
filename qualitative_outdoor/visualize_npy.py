@@ -40,5 +40,7 @@ for result_filename in sorted(os.listdir(results_base)):
 
     svg = svg_generate(image_path, corners, edges, name='temp', size=256)
     svg_path = os.path.join(svg_base, 'tmp.svg')
+    svg.saveas(svg_path)  # save the svg file temporarily
+
     svg_img_path = os.path.join(svg_method_base, '{}.png'.format(filename))
     cairosvg.svg2png(url=svg_path, write_to=svg_img_path)
