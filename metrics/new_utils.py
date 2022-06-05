@@ -7,9 +7,6 @@ import skimage
 import random
 import time
 
-# from SVG_utils import svg_generate
-# from config import config
-
 TWO_CORNER_MINIMUM_DISTANCE = 5
 SAFE_NUM = 3
 score_weights = (1., 2., 100.)

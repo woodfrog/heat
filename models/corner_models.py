@@ -4,15 +4,12 @@ import torch.nn.functional as F
 import numpy as np
 import math
 from models.deformable_transformer import DeformableTransformerEncoderLayer, DeformableTransformerEncoder, \
-    DeformableTransformerDecoder, DeformableTransformerDecoderLayer, DeformableAttnDecoderLayer
+    DeformableTransformerDecoder, DeformableAttnDecoderLayer
 from models.ops.modules import MSDeformAttn
-from models.mlp import MLP
-from models.unet import convrelu
+from models.resnet import convrelu
 from torch.nn.init import xavier_uniform_, constant_, uniform_, normal_
-from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 from utils.misc import NestedTensor
-import scipy.ndimage.filters as filters
 
 
 class CornerEnum(nn.Module):
@@ -121,7 +118,6 @@ class CornerEnum(nn.Module):
         # compute the reference points
         H_tgt = W_tgt = int(np.sqrt(sp_inputs.shape[1]))
         reference_points_s1 = self.get_decoder_reference_points(H_tgt, W_tgt, sp_inputs.device)
-        rp_all_pixels = self.get_decoder_reference_points(256, 256, sp_inputs.device)
 
         corner_logits = self.transformer(srcs, masks, all_pos, sp_inputs, reference_points_s1, all_image_feats)
         return corner_logits
@@ -183,7 +179,6 @@ class CornerTransformer(nn.Module):
                                                         num_feature_levels, nhead, dec_n_points)
         self.per_edge_decoder = DeformableTransformerDecoder(decoder_attn_layer, 1, False, with_sa=False)
 
-
         self.level_embed = nn.Parameter(torch.Tensor(num_feature_levels, d_model))
 
         # upconv layers
@@ -203,8 +198,6 @@ class CornerTransformer(nn.Module):
         for m in self.modules():
             if isinstance(m, MSDeformAttn):
                 m._reset_parameters()
-        # xavier_uniform_(self.reference_points.weight.data, gain=1.0)
-        # constant_(self.reference_points.bias.data, 0.)
         normal_(self.level_embed)
 
     def get_valid_ratio(self, mask):
@@ -251,8 +244,8 @@ class CornerTransformer(nn.Module):
 
         # relational decoder
         hs_pixels_s1, _ = self.per_edge_decoder(tgt, reference_points, memory,
-                                                spatial_shapes, level_start_index, valid_ratios, query_embed,
-                                                mask_flatten)
+                                                 spatial_shapes, level_start_index, valid_ratios, query_embed,
+                                                 mask_flatten)
 
         feats_s1, preds_s1 = self.generate_corner_preds(hs_pixels_s1, all_image_feats)
 

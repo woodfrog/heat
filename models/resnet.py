@@ -1,9 +1,6 @@
 import torch
 import torch.nn as nn
 from torchvision import models
-import torch.nn.functional as F
-from torchvision.models._utils import IntermediateLayerGetter
-from utils.misc import NestedTensor
 
 
 def convrelu(in_channels, out_channels, kernel, padding):

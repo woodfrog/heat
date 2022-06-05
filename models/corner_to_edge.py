@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 import numpy as np
 import scipy.ndimage.filters as filters
 import cv2
@@ -10,13 +9,15 @@ MATCH_THRESH = 5
 LOCAL_MAX_THRESH = 0.01
 viz_count = 0
 
+# pre-compute all combinations to generate edge candidates faster
 all_combibations = dict()
 for length in range(2, 351):
     ids = np.arange(length)
     combs = np.array(list(itertools.combinations(ids, 2)))
     all_combibations[length] = combs
 
-def prepare_edge_data(c_outputs, annots, images):
+
+def prepare_edge_data(c_outputs, annots, images, max_corner_num):
     bs = c_outputs.shape[0]
     # prepares parameters for each sample of the batch
     all_results = list()
@@ -24,7 +25,7 @@ def prepare_edge_data(c_outputs, annots, images):
     for b_i in range(bs):
         annot = annots[b_i]
         output = c_outputs[b_i]
-        results = process_each_sample({'annot': annot, 'output': output, 'viz_img': images[b_i]})
+        results = process_each_sample({'annot': annot, 'output': output, 'viz_img': images[b_i]}, max_corner_num)
         all_results.append(results)
 
     processed_corners = [item['corners'] for item in all_results]
@@ -58,10 +59,9 @@ def process_annot(annot, do_round=True):
     return corners, edges, corner_degrees
 
 
-def process_each_sample(data):
+def process_each_sample(data, max_corner_num):
     annot = data['annot']
     output = data['output']
-    viz_img = data['viz_img']
 
     preds = output.detach().cpu().numpy()
 
@@ -74,15 +74,10 @@ def process_each_sample(data):
     pred_corners = np.stack(local_maximas, axis=-1)[:, [1, 0]]  # to (x, y format)
 
     # produce edge labels labels from pred corners here
-    #global viz_count
-    #rand_num = np.random.rand()
-    #if rand_num > 0.7 and len(pred_corners) > 0:
-        #processed_corners, edges, labels = get_edge_label_det_only(pred_corners, annot)  # only using det corners
-        #output_path = './viz_edge_data/{}_example_det.png'.format(viz_count)
-        #_visualize_edge_training_data(processed_corners, edges, labels, viz_img, output_path)
-    #else:
-    #    # use g.t. corners, but mix with neg pred corners
-    processed_corners, edges, labels = get_edge_label_mix_gt(pred_corners, annot)
+
+    processed_corners, edges, labels = get_edge_label_mix_gt(pred_corners, annot, max_corner_num)
+    # global viz_count
+    # viz_img = data['viz_img']
     #output_path = './viz_training/{}_example_gt.png'.format(viz_count)
     #_visualize_edge_training_data(processed_corners, edges, labels, viz_img, output_path)
     #viz_count += 1
@@ -95,7 +90,7 @@ def process_each_sample(data):
     return results
 
 
-def get_edge_label_mix_gt(pred_corners, annot):
+def get_edge_label_mix_gt(pred_corners, annot, max_corner_num):
     ind = np.lexsort(pred_corners.T)  # sort the pred corners to fix the order for matching
     pred_corners = pred_corners[ind]  # sorted by y, then x
     gt_corners, edge_pairs, corner_degrees = process_annot(annot)
@@ -127,10 +122,12 @@ def get_edge_label_mix_gt(pred_corners, annot):
     nm_pred_ids = np.random.permutation(nm_pred_ids)
     if len(nm_pred_ids) > 0:
         nm_pred_corners = pred_corners[nm_pred_ids]
-        if len(nm_pred_ids) + len(all_corners) <= 150:
+        #if len(nm_pred_ids) + len(all_corners) <= 150:
+        if len(nm_pred_ids) + len(all_corners) <= max_corner_num:
             all_corners = np.concatenate([all_corners, nm_pred_corners], axis=0)
         else:
-            all_corners = np.concatenate([all_corners, nm_pred_corners[:(150 - len(gt_corners)), :]], axis=0)
+            #all_corners = np.concatenate([all_corners, nm_pred_corners[:(150 - len(gt_corners)), :]], axis=0)
+            all_corners = np.concatenate([all_corners, nm_pred_corners[:(max_corner_num - len(gt_corners)), :]], axis=0)
 
     processed_corners, edges, edge_ids, labels = _get_edges(all_corners, edge_pairs)
 
@@ -218,42 +215,6 @@ def get_infer_edge_pairs(corners, confs):
     mask = torch.zeros([edge_coords.shape[0], edge_coords.shape[1]]).bool()
     edge_ids = torch.tensor(np.array(edge_ids))
     return corners, confs, edge_coords, mask, edge_ids
-
-
-
-def get_mlm_info(labels, mlm=True):
-    """
-    :param labels: original edge labels
-    :param mlm: whether enable mlm
-    :return: g.t. values: 0-known false, 1-known true, 2-unknown
-    """
-    if mlm:  # For training / evaluting with MLM
-        rand_ratio = np.random.rand() * 0.5 + 0.5
-        labels = torch.Tensor(labels)
-        gt_rand = torch.rand(labels.size())
-        gt_flag = torch.zeros_like(labels)
-        gt_value = torch.zeros_like(labels)
-        gt_flag[torch.where(gt_rand >= rand_ratio)] = 1
-        gt_idx = torch.where(gt_flag == 1)
-        pred_idx = torch.where(gt_flag == 0)
-        gt_value[gt_idx] = labels[gt_idx]
-        gt_value[pred_idx] = 2  # use 2 to represent unknown value, need to predict
-    else:
-        labels = torch.Tensor(labels)
-        gt_flag = torch.zeros_like(labels)
-        gt_value = torch.zeros_like(labels)
-        gt_flag[:] = 0
-        gt_value[:] = 2
-    return gt_value
-
-
-def _get_rand_midpoint(edge):
-    c1, c2 = edge
-    _rand = np.random.rand() * 0.4 + 0.3
-    mid_x = int(np.round(c1[0] + (c2[0] - c1[0]) * _rand))
-    mid_y = int(np.round(c1[1] + (c2[1] - c1[1]) * _rand))
-    mid_point = (mid_x, mid_y)
-    return mid_point
 
 
 def _visualize_edge_training_data(corners, edges, edge_labels, image, save_path):

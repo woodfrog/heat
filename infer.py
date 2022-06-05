@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from datasets.building_corners import BuildingCornerDataset, collate_fn_corner, get_pixel_features
-from models.unet import ResNetUNet, ResNetBackbone
+from datasets.outdoor_buildings import OutdoorBuildingDataset
+from datasets.s3d_floorplans import S3DFloorplanDataset
+from datasets.data_utils import collate_fn, get_pixel_features
+from models.resnet import ResNetBackbone
 from models.corner_models import CornerEnum
 from models.edge_models import EdgeEnum
 from models.corner_to_edge import get_infer_edge_pairs
@@ -16,8 +18,8 @@ from metrics.get_metric import compute_metrics, get_recall_and_precision
 import skimage
 
 
-def visualize_cond_generation(positive_pixels, confs, image, save_path, range_bbox=None, negative_pixels=None,
-                              gt_corners=None, prec=None, recall=None, image_masks=None, edges=None, edge_confs=None):
+def visualize_cond_generation(positive_pixels, confs, image, save_path, gt_corners=None, prec=None, recall=None,
+                              image_masks=None, edges=None, edge_confs=None):
     image = image.copy()  # get a new copy of the original image
     if confs is not None:
         viz_confs = confs
@@ -97,22 +99,23 @@ def corner_nms(preds, confs, image_size):
     return filtered_preds, new_confs
 
 
-def main():
-    DATAPATH = './data/cities_dataset'
-    DET_PATH = './data/det_final'
-
-    ckpt_path = './checkpoints/ckpts_heat_full_256/checkpoint.pth'
-    #ckpt_path = './checkpoints/ckpts_heat_full_512/checkpoint.pth'
+def main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times):
     ckpt = torch.load(ckpt_path)
     print('Load from ckpts of epoch {}'.format(ckpt['epoch']))
-    args = ckpt['args']
+    ckpt_args = ckpt['args']
+    if dataset == 'outdoor':
+        DATAPATH = './data/cities_dataset'
+        DET_PATH = './data/det_final'
+        test_dataset = OutdoorBuildingDataset(DATAPATH, DET_PATH, phase='test', image_size=image_size, rand_aug=False,
+                                              inference=True)
+    elif dataset == 's3d_floorplan':
+        DATAPATH = './data/s3d_floorplan'
+        test_dataset = S3DFloorplanDataset(DATAPATH, phase='test', rand_aug=False, inference=True)
+    else:
+        raise ValueError('Unknown dataset type: {}'.format(dataset))
 
-    image_size = 256
-
-    test_dataset = BuildingCornerDataset(DATAPATH, DET_PATH, phase='test', image_size=image_size, rand_aug=False,
-                                         training_split='full', inference=True)
     test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0,
-                                 collate_fn=collate_fn_corner)
+                                 collate_fn=collate_fn)
 
     backbone = ResNetBackbone()
     strides = backbone.strides
@@ -137,10 +140,10 @@ def main():
     edge_model.load_state_dict(ckpt['edge_model'])
     print('Loaded saved model from {}'.format(ckpt_path))
 
-    viz_base = './viz_heat_256'
-    npy_save_base = './npy_heat_256'
     if not os.path.exists(viz_base):
         os.makedirs(viz_base)
+    if not os.path.exists(save_base):
+        os.makedirs(save_base)
 
     all_prec = list()
     all_recall = list()
@@ -156,10 +159,8 @@ def main():
     region_length = 0.0
 
     pixels, pixel_features = get_pixel_features(image_size=image_size)
-
     for data_i, data in enumerate(test_dataloader):
         image = data['img'].cuda()
-        rec_mat = data['rec_mat'][0]
         img_path = data['img_path'][0]
         annot_path = data['annot_path'][0]
         annot = np.load(annot_path, allow_pickle=True, encoding='latin1').tolist()
@@ -169,7 +170,7 @@ def main():
                                                                                         corner_model,
                                                                                         edge_model,
                                                                                         pixels, pixel_features,
-                                                                                        args, 3, corner_thresh=0.01,
+                                                                                        ckpt_args, infer_times, corner_thresh=0.01,
                                                                                         image_size=image_size)
 
         # viz_image = cv2.imread(img_path)
@@ -178,22 +179,9 @@ def main():
         viz_image = data['raw_img'][0].cpu().numpy().transpose(1, 2, 0)
         viz_image = (viz_image * 255).astype(np.uint8)
 
-        ## visualize G.T.
-        # pixel_labels = pixel_labels[0].cpu().numpy()
-        # pos_index = np.where(pixel_labels == 1)
-        # neg_index = np.where(pixel_labels == 0)
-        # positive_pixels = pixels[0][pos_index]
-
         # visualize G.T.
         gt_path = os.path.join(viz_base, '{}_gt.png'.format(data_i))
-        visualize_cond_generation(positive_pixels, None, viz_image, gt_path, range_bbox=None, negative_pixels=None,
-                                  gt_corners=None, image_masks=None)
-
-        if rec_mat is not None:
-            back_mat = np.linalg.inv(rec_mat)
-            pred_corners = np.concatenate([pred_corners, np.ones([pred_corners.shape[0], 1])], axis=-1)
-            pred_corners = np.matmul(back_mat, pred_corners.T).T
-            pred_corners = pred_corners[:, :2].round()
+        visualize_cond_generation(positive_pixels, None, viz_image, gt_path, gt_corners=None, image_masks=None)
 
         if len(pred_corners) > 0:
             prec, recall = corner_eval(positive_pixels, pred_corners)
@@ -206,13 +194,8 @@ def main():
             pred_confs = None
 
         recon_path = os.path.join(viz_base, '{}_pred_corner.png'.format(data_i))
-        visualize_cond_generation(pred_corners, pred_confs, viz_image, recon_path, range_bbox=None,
-                                  gt_corners=None, prec=prec, recall=recall)
-        # recon_path = os.path.join(viz_base, '{}_pred_edge.png'.format(data_i))
-        # visualize_cond_generation(pred_corners, pred_confs, viz_image, recon_path, range_bbox=None,
-        #                          gt_corners=inputs, prec=prec, recall=recall, edges=pos_edges, edge_confs=edge_confs)
-
-        # plot_heatmap(c_outputs_np, os.path.join(viz_base, '{}_heatmap.png'.format(data_i)))
+        visualize_cond_generation(pred_corners, pred_confs, viz_image, recon_path, gt_corners=None, prec=prec,
+                                  recall=recall)
 
         pred_corners, pred_confs, pos_edges = postprocess_preds(pred_corners, pred_confs, pos_edges)
 
@@ -221,13 +204,18 @@ def main():
             'edges': pos_edges,
         }
 
-        save_results = {
-            'corners': pred_corners,
-            'edges': pos_edges,
-            'image_path': img_path,
-        }
-        save_path = os.path.join(npy_save_base, '{}_results.npy'.format(data_i))
-        #np.save(save_path, save_results)
+        if dataset == 's3d_floorplan':
+            save_filename = os.path.basename(annot_path)
+            save_npy_path = os.path.join(save_base, save_filename)
+            np.save(save_npy_path, pred_data)
+        else:
+            save_results = {
+                'corners': pred_corners,
+                'edges': pos_edges,
+                'image_path': img_path,
+            }
+            save_path = os.path.join(save_base, '{}_results.npy'.format(data_i))
+            np.save(save_path, save_results)
 
         gt_data = convert_annot(annot)
 
@@ -239,13 +227,9 @@ def main():
         er_recall = (edge_recall, region_recall)
         er_prec = (edge_prec, region_prec)
 
-        # recon_path = os.path.join(viz_base, '{}_pred_corner.png'.format(data_i))
-        # visualize_cond_generation(pred_corners, pred_confs, viz_image, recon_path, range_bbox=None,
-        #                          gt_corners=inputs, prec=prec, recall=recall)
         recon_path = os.path.join(viz_base, '{}_pred_edge.png'.format(data_i))
-        visualize_cond_generation(pred_corners, pred_confs, viz_image, recon_path, range_bbox=None,
-                                  gt_corners=None, prec=er_prec, recall=er_recall, edges=pos_edges,
-                                  edge_confs=edge_confs)
+        visualize_cond_generation(pred_corners, pred_confs, viz_image, recon_path, gt_corners=None, prec=er_prec,
+                                  recall=er_recall, edges=pos_edges, edge_confs=edge_confs)
         corner_tp += score['corner_tp']
         corner_fp += score['corner_fp']
         corner_length += score['corner_length']
@@ -263,19 +247,16 @@ def main():
     recall, precision = get_recall_and_precision(corner_tp, corner_fp, corner_length)
     f_score = 2.0 * precision * recall / (recall + precision + 1e-8)
     print('corners - precision: %.3f recall: %.3f f_score: %.3f' % (precision, recall, f_score))
-    # f.write('corners - precision: %.3f recall: %.3f f_score: %.3f\n' % (precision, recall, f_score))
 
     # edge
     recall, precision = get_recall_and_precision(edge_tp, edge_fp, edge_length)
     f_score = 2.0 * precision * recall / (recall + precision + 1e-8)
     print('edges - precision: %.3f recall: %.3f f_score: %.3f' % (precision, recall, f_score))
-    # f.write('edges - precision: %.3f recall: %.3f f_score: %.3f\n' % (precision, recall, f_score))
 
     # region
     recall, precision = get_recall_and_precision(region_tp, region_fp, region_length)
     f_score = 2.0 * precision * recall / (recall + precision + 1e-8)
     print('regions - precision: %.3f recall: %.3f f_score: %.3f' % (precision, recall, f_score))
-    # f.write('regions - precision: %.3f recall: %.3f f_score: %.3f\n' % (precision, recall, f_score))
 
     print('Avg prec: {}, Avg recall: {}'.format(avg_prec, avg_recall))
 
@@ -294,13 +275,10 @@ def get_results(image, annot, backbone, corner_model, edge_model, pixels, pixel_
     pred_confs = c_outputs_np[pos_indices]
     pred_corners, pred_confs = corner_nms(pred_corners, pred_confs, image_size=c_outputs.shape[1])
 
-    # pred_corners = np.array(list(annot.keys()))
-    # pred_confs = np.array([1.0] * len(pred_corners))
-
     pred_corners, pred_confs, edge_coords, edge_mask, edge_ids = get_infer_edge_pairs(pred_corners, pred_confs)
 
     corner_nums = torch.tensor([len(pred_corners)]).to(image.device)
-    max_candidates = torch.stack([corner_nums.max() * 3] * len(corner_nums), dim=0)
+    max_candidates = torch.stack([corner_nums.max() * args.corner_to_edge_multiplier] * len(corner_nums), dim=0)
 
     all_pos_ids = set()
     all_edge_confs = dict()
@@ -316,8 +294,9 @@ def get_results(image, annot, backbone, corner_model, edge_model, pixels, pixel_
                                                                                                  edge_coords, edge_mask,
                                                                                                  gt_values, corner_nums,
                                                                                                  max_candidates,
-                                                                                                 #do_inference=True)
                                                                                                  True)
+                                                                                                 #do_inference=True)
+
         num_total = s1_logits.shape[2]
         num_selected = selected_ids.shape[1]
         num_filtered = num_total - num_selected
@@ -331,10 +310,7 @@ def get_results(image, annot, backbone, corner_model, edge_model, pixels, pixel_
 
         selected_ids = selected_ids.squeeze().detach().cpu().numpy()
         if tt != infer_times - 1:
-            if tt == 0:
-                s2_preds_np = s2_preds_hb_np
-            else:
-                s2_preds_np = s2_preds_hb_np
+            s2_preds_np = s2_preds_hb_np
 
             pos_edge_ids = np.where(s2_preds_np >= 0.9)
             neg_edge_ids = np.where(s2_preds_np <= 0.01)
@@ -354,10 +330,7 @@ def get_results(image, annot, backbone, corner_model, edge_model, pixels, pixel_
             if num_to_pred <= num_filtered:
                 break
         else:
-            if tt == 0:
-                s2_preds_np = s2_preds_hb_np
-            else:
-                s2_preds_np = s2_preds_hb_np
+            s2_preds_np = s2_preds_hb_np
 
             pos_edge_ids = np.where(s2_preds_np >= 0.5)
             # pos_edge_ids = np.where(s1_preds_np >= 0.5)
@@ -454,4 +427,12 @@ def convert_annot(annot):
 
 
 if __name__ == '__main__':
-    main()
+    # todo: put the following 3 checkpoints into a separate directory for releasing...
+    #ckpt_path = './checkpoints/ckpts_heat_s3d_256/checkpoint.pth'
+    ckpt_path = './checkpoints/ckpts_heat_outdoor_256/checkpoint.pth'
+    #ckpt_path = './checkpoints/ckpts_heat_outdoor_512/checkpoint.pth'
+    image_size = 256
+    dataset = 'outdoor'
+    viz_base = './results/viz_outdoor_test'
+    save_base = './results/npy_outdoor_test'
+    main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times=3)

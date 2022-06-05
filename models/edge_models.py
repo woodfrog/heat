@@ -54,13 +54,11 @@ class EdgeEnum(nn.Module):
     @staticmethod
     def get_ms_feat(xs, img_mask):
         out: Dict[str, NestedTensor] = {}
-        # out = list()
         for name, x in sorted(xs.items()):
             m = img_mask
             assert m is not None
             mask = F.interpolate(m[None].float(), size=x.shape[-2:]).to(torch.bool)[0]
             out[name] = NestedTensor(x, mask)
-            # out.append(NestedTensor(x, mask))
         return out
 
     def forward(self, image_feats, feat_mask, corner_outputs, edge_coords, edge_masks, gt_values, corner_nums,
@@ -147,16 +145,18 @@ class EdgeTransformer(nn.Module):
         decoder_attn_layer = DeformableAttnDecoderLayer(d_model, dim_feedforward,
                                                         dropout, activation,
                                                         num_feature_levels, nhead, dec_n_points)
+        # one-layer decoder, without self-attention layers
         self.per_edge_decoder = DeformableTransformerDecoder(decoder_attn_layer, 1, False, with_sa=False)
 
         decoder_layer = DeformableTransformerDecoderLayer(d_model, dim_feedforward,
                                                           dropout, activation,
                                                           num_feature_levels, nhead, dec_n_points)
+
+        # edge decoder w/ self-attention layers (image-aware decoder and geom-only decoder)
         self.relational_decoder = DeformableTransformerDecoder(decoder_layer, num_decoder_layers,
                                                                return_intermediate_dec, with_sa=True)
 
         self.level_embed = nn.Parameter(torch.Tensor(num_feature_levels, d_model))
-        # self.reference_points = nn.Linear(d_model, 2)
 
         self.gt_label_embed = nn.Embedding(3, d_model)
 
@@ -175,8 +175,6 @@ class EdgeTransformer(nn.Module):
         for m in self.modules():
             if isinstance(m, MSDeformAttn):
                 m._reset_parameters()
-        # xavier_uniform_(self.reference_points.weight.data, gain=1.0)
-        # constant_(self.reference_points.bias.data, 0.)
         normal_(self.level_embed)
 
     def get_valid_ratio(self, mask):
@@ -222,29 +220,25 @@ class EdgeTransformer(nn.Module):
 
         tgt = query_embed
 
-        # reference_points = self.reference_points(query_embed).sigmoid()
-        init_reference_out = reference_points
-
-        # relational decoder
+        # per-edge filtering with single-layer decoder (no self-attn)
         hs_per_edge, _ = self.per_edge_decoder(tgt, reference_points, memory,
                                                spatial_shapes, level_start_index, valid_ratios, query_embed,
                                                mask_flatten)
-
         logits_per_edge = self.output_fc_1(hs_per_edge).permute(0, 2, 1)
-
         filtered_hs, filtered_mask, filtered_query, filtered_rp, filtered_labels, selected_ids = self.candidate_filtering(
             logits_per_edge,
             hs_per_edge, query_embed, reference_points,
             labels,
             key_padding_mask, corner_nums, max_candidates)
-
+        
+        # generate the info for masked training
         if not do_inference:
             filtered_gt_values = self.generate_gt_masking(filtered_labels, filtered_mask)
         else:
             filtered_gt_values = filtered_labels
-
-        # relational decoder with image feature
         gt_info = self.gt_label_embed(filtered_gt_values)
+
+        # relational decoder with image feature (image-aware decoder)
         hybrid_prim_hs = self.input_fc_hb(torch.cat([filtered_hs, gt_info], dim=-1))
 
         hs, inter_references = self.relational_decoder(hybrid_prim_hs, filtered_rp, memory,
@@ -254,7 +248,7 @@ class EdgeTransformer(nn.Module):
 
         logits_final_hb = self.output_fc_2(hs).permute(0, 2, 1)
 
-        # relational decoder without image feature
+        # relational decoder without image feature (geom-only decoder)
         rel_prim_hs = self.input_fc_rel(torch.cat([filtered_query, gt_info], dim=-1))
 
         hs_rel, _ = self.relational_decoder(rel_prim_hs, filtered_rp, memory,

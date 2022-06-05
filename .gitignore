@@ -1,10 +1,12 @@
-data
+./data
 .DS_Store
 viz/*
 *.tar
 *.pdf
 svg_*
 *.html
-checkpoints
-qualitative
+models/ops/build
+models/ops/dist
+models/ops/*egg-info
 __pycache__
+results

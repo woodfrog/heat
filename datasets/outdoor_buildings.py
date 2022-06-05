@@ -1,35 +1,19 @@
 import numpy as np
-import torch
-from torch.utils.data import Dataset
+from datasets.corners import CornersDataset
 import os
 import skimage
-from scipy.ndimage import gaussian_filter
 import cv2
-from utils.nn_utils import positional_encoding_2d
 from torchvision import transforms
 from PIL import Image
-from datasets.data_util import RandomBlur
-import itertools
-from torch.utils.data.dataloader import default_collate
+from datasets.data_utils import RandomBlur
 
-mean = [0.485, 0.456, 0.406]
-std = [0.229, 0.224, 0.225]
-
-all_combibations = dict()
-for length in range(2, 351):
-    ids = np.arange(length)
-    combs = np.array(list(itertools.combinations(ids, 2)))
-    all_combibations[length] = combs
-
-
-class BuildingCornerDataset(Dataset):
-    def __init__(self, data_path, det_path, phase='train', image_size=256, rand_aug=True, d_pe=128, training_split=None,
+class OutdoorBuildingDataset(CornersDataset):
+    def __init__(self, data_path, det_path, phase='train', image_size=256, rand_aug=True,
                  inference=False):
-        super(BuildingCornerDataset, self).__init__()
+        super(OutdoorBuildingDataset, self).__init__(image_size, inference)
         self.data_path = data_path
         self.det_path = det_path
         self.phase = phase
-        self.d_pe = d_pe
         self.rand_aug = rand_aug
         self.image_size = image_size
         self.inference = inference
@@ -47,18 +31,15 @@ class BuildingCornerDataset(Dataset):
             datalistfile = os.path.join(data_path, 'valid_list.txt')
             self.training = False
         with open(datalistfile, 'r') as f:
-            self._data_names = f.readlines()
-        num_examples = len(self._data_names)
+            _data_names = f.readlines()
         if phase == 'train':
-            if training_split == 'first':
-                self._data_names = self._data_names[:num_examples // 2]
-            elif training_split == 'second':
-                self._data_names = self._data_names[num_examples // 2:]
+            self._data_names = _data_names
         else:
+            # based on the data split rule from previous works
             if phase == 'valid':
-                self._data_names = self._data_names[:50]
+                self._data_names = _data_names[:50]
             elif phase == 'test':
-                self._data_names = self._data_names[50:]
+                self._data_names = _data_names[50:]
             else:
                 raise ValueError('Invalid phase {}'.format(phase))
 
@@ -120,57 +101,6 @@ class BuildingCornerDataset(Dataset):
 
         return self.process_data(raw_data)
 
-    def process_data(self, data):
-        img = data['image']
-        corners = data['corners']
-        annot = data['annot']
-        rec_mat = data['rec_mat']
-
-        # pre-process the image to use ImageNet-pretrained backbones
-        img = img.transpose((2, 0, 1))
-        raw_img = img.copy()
-        img = (img - np.array(mean)[:, np.newaxis, np.newaxis]) / np.array(std)[:, np.newaxis, np.newaxis]
-        img = img.astype(np.float32)
-
-        corners = np.array(corners)
-
-        # corner labels
-        pixel_labels, gauss_labels = self.get_corner_labels(corners)
-
-        return {
-            'pixel_labels': pixel_labels,
-            'gauss_labels': gauss_labels,
-            "annot": annot,
-            "name": data['name'],
-            'img': img,
-            'raw_img': raw_img,
-            'rec_mat': rec_mat,
-            'annot_path': data['annot_path'],
-            'det_path': data['det_path'],
-            'img_path': data['img_path'],
-        }
-
-    def get_corner_labels(self, corners):
-        labels = np.zeros((self.image_size, self.image_size))
-        corners = corners.round()
-        xint, yint = corners[:, 0].astype(np.int), corners[:, 1].astype(np.int)
-        labels[yint, xint] = 1
-
-        gauss_labels = gaussian_filter(labels, sigma=2)
-        gauss_labels = gauss_labels / gauss_labels.max()
-        return labels, gauss_labels
-
-    def resize_data(self, image, annot, det_corners):
-        new_image = cv2.resize(image, (self.image_size, self.image_size))
-        new_annot = {}
-        r = self.image_size / 256
-        for c, connections in annot.items():
-            new_c = tuple(np.array(c) * r)
-            new_connections = [other_c * r for other_c in connections]
-            new_annot[new_c] = new_connections
-        new_dets = det_corners * r
-        return new_image, new_annot, new_dets
-
     def random_aug_annot(self, img, annot, det_corners=None):
         # do random flipping
         img, annot, det_corners = self.random_flip(img, annot, det_corners)
@@ -194,8 +124,7 @@ class BuildingCornerDataset(Dataset):
                 all_corners.append(tuple(det_corners[i]))
         all_corners_ = np.array(all_corners)
 
-        # Do the per-corner transform
-        # Done in a big matrix transformation to save processing time.
+        # Do the corner transform within a big matrix transformation
         corner_mapping = dict()
         ones = np.ones([all_corners_.shape[0], 1])
         all_corners_ = np.concatenate([all_corners_, ones], axis=-1)
@@ -237,81 +166,6 @@ class BuildingCornerDataset(Dataset):
             aug_det_corners = np.array(aug_det_corners)
             return aug_img, aug_annot, corner_mapping, aug_det_corners
 
-    def random_flip(self, img, annot, det_corners):
-        height, width, _ = img.shape
-        rand_int = np.random.randint(0, 4)
-        if rand_int == 0:
-            return img, annot, det_corners
-
-        all_corners = list(annot.keys())
-        if det_corners is not None:
-            for i in range(det_corners.shape[0]):
-                all_corners.append(tuple(det_corners[i]))
-        new_corners = np.array(all_corners)
-
-        if rand_int == 1:
-            img = img[:, ::-1, :]
-            new_corners[:, 0] = width - new_corners[:, 0]
-        elif rand_int == 2:
-            img = img[::-1, :, :]
-            new_corners[:, 1] = height - new_corners[:, 1]
-        else:
-            img = img[::-1, ::-1, :]
-            new_corners[:, 0] = width - new_corners[:, 0]
-            new_corners[:, 1] = height - new_corners[:, 1]
-
-        new_corners = np.clip(new_corners, 0, self.image_size - 1)  # clip into [0, 255]
-        corner_mapping = dict()
-        for idx, corner in enumerate(all_corners):
-            corner_mapping[corner] = new_corners[idx]
-
-        aug_annot = dict()
-        for corner, connections in annot.items():
-            new_corner = corner_mapping[corner]
-            tuple_new_corner = tuple(new_corner)
-            aug_annot[tuple_new_corner] = list()
-            for to_corner in connections:
-                aug_annot[tuple_new_corner].append(corner_mapping[tuple(to_corner)])
-
-        if det_corners is not None:
-            aug_det_corners = list()
-            for corner in det_corners:
-                new_corner = corner_mapping[tuple(corner)]
-                aug_det_corners.append(new_corner)
-            det_corners = np.array(aug_det_corners)
-
-        return img, aug_annot, det_corners
-
-
-def collate_fn_corner(data):
-    batched_data = {}
-    for field in data[0].keys():
-        if field in ['annot', 'rec_mat']:
-            batch_values = [item[field] for item in data]
-        else:
-            batch_values = default_collate([d[field] for d in data])
-        if field in ['pixel_features', 'pixel_labels', 'gauss_labels']:
-            batch_values = batch_values.float()
-        batched_data[field] = batch_values
-
-    return batched_data
-
-
-def get_pixel_features(image_size, d_pe=128):
-    all_pe = positional_encoding_2d(d_pe, image_size, image_size)
-    pixels_x = np.arange(0, image_size)
-    pixels_y = np.arange(0, image_size)
-
-    xv, yv = np.meshgrid(pixels_x, pixels_y)
-    all_pixels = list()
-    for i in range(xv.shape[0]):
-        pixs = np.stack([xv[i], yv[i]], axis=-1)
-        all_pixels.append(pixs)
-    pixels = np.stack(all_pixels, axis=0)
-
-    pixel_features = all_pe[:, pixels[:, :, 1], pixels[:, :, 0]]
-    pixel_features = pixel_features.permute(1, 2, 0)
-    return pixels, pixel_features
 
 
 if __name__ == '__main__':
@@ -319,9 +173,9 @@ if __name__ == '__main__':
 
     DATAPATH = './data/cities_dataset'
     DET_PATH = './data/det_final'
-    train_dataset = BuildingCornerDataset(DATAPATH, DET_PATH, phase='train')
+    train_dataset = OutdoorBuildingDataset(DATAPATH, DET_PATH, phase='train')
     train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
-                                  collate_fn=collate_fn_corner)
+                                  collate_fn=collate_fn)
     for i, item in enumerate(train_dataloader):
         import pdb;
 
