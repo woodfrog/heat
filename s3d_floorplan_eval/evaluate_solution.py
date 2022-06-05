@@ -48,7 +48,7 @@ room_polys_def = [np.array([[191, 150],
        [108,  50],
        [ 50,  50]])]
 
-pg_base = '../results/npy_s3d_test_256/'
+pg_base = '../results/npy_heat_s3d_256/'
 
 options = MCSSOptions()
 opts = options.parse()

@@ -250,16 +250,20 @@ def main():
             epoch, args.clip_max_norm, args)
         lr_scheduler.step()
 
-        val_stats = evaluate(
-            image_size, backbone, corner_model, edge_model, corner_criterion, edge_criterion, test_dataloader,
-            epoch, args
-        )
+        if args.run_validation:
+            val_stats = evaluate(
+                image_size, backbone, corner_model, edge_model, corner_criterion, edge_criterion, test_dataloader,
+                epoch, args
+            )
 
-        val_acc = (val_stats['edge_acc_s1'] + val_stats['edge_acc_s2_hb']) / 2
-        if val_acc > best_acc:
-            is_best = True
-            best_acc = val_acc
+            val_acc = (val_stats['edge_acc_s1'] + val_stats['edge_acc_s2_hb']) / 2
+            if val_acc > best_acc:
+                is_best = True
+                best_acc = val_acc
+            else:
+                is_best = False
         else:
+            val_acc = 0
             is_best = False
 
         if args.output_dir:
