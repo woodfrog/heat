@@ -429,12 +429,11 @@ def convert_annot(annot):
 
 
 if __name__ == '__main__':
-    # todo: put the following 3 checkpoints into a separate directory for releasing...
-    #ckpt_path = './checkpoints/ckpts_heat_s3d_256/checkpoint.pth'
-    ckpt_path = './checkpoints/ckpts_heat_outdoor_256/checkpoint.pth'
+    ckpt_path = './checkpoints/ckpts_heat_s3d_256/checkpoint.pth'
+    #ckpt_path = './checkpoints/ckpts_heat_outdoor_256/checkpoint.pth'
     #ckpt_path = './checkpoints/ckpts_heat_outdoor_512/checkpoint.pth'
     image_size = 256
-    dataset = 'outdoor'
-    viz_base = './results/viz_outdoor_test_256'
-    save_base = './results/npy_outdoor_test_256'
+    dataset = 's3d_floorplan'
+    viz_base = './results/viz_s3d_test_256'
+    save_base = './results/npy_s3d_test_256'
     main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times=3)
