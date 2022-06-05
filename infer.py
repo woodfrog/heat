@@ -104,13 +104,13 @@ def main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times):
     print('Load from ckpts of epoch {}'.format(ckpt['epoch']))
     ckpt_args = ckpt['args']
     if dataset == 'outdoor':
-        DATAPATH = './data/cities_dataset'
-        DET_PATH = './data/det_final'
-        test_dataset = OutdoorBuildingDataset(DATAPATH, DET_PATH, phase='test', image_size=image_size, rand_aug=False,
+        data_path = './data/outdoor/cities_dataset'
+        det_path = './data/outdoor/det_final'
+        test_dataset = OutdoorBuildingDataset(data_path, det_path, phase='test', image_size=image_size, rand_aug=False,
                                               inference=True)
     elif dataset == 's3d_floorplan':
-        DATAPATH = './data/s3d_floorplan'
-        test_dataset = S3DFloorplanDataset(DATAPATH, phase='test', rand_aug=False, inference=True)
+        data_path = './data/s3d_floorplan'
+        test_dataset = S3DFloorplanDataset(data_path, phase='test', rand_aug=False, inference=True)
     else:
         raise ValueError('Unknown dataset type: {}'.format(dataset))
 
@@ -158,7 +158,9 @@ def main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times):
     region_fp = 0.0
     region_length = 0.0
 
+    # get the positional encodings for all pixels
     pixels, pixel_features = get_pixel_features(image_size=image_size)
+
     for data_i, data in enumerate(test_dataloader):
         image = data['img'].cuda()
         img_path = data['img_path'][0]
@@ -433,6 +435,6 @@ if __name__ == '__main__':
     #ckpt_path = './checkpoints/ckpts_heat_outdoor_512/checkpoint.pth'
     image_size = 256
     dataset = 'outdoor'
-    viz_base = './results/viz_outdoor_test'
-    save_base = './results/npy_outdoor_test'
+    viz_base = './results/viz_outdoor_test_256'
+    save_base = './results/npy_outdoor_test_256'
     main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times=3)

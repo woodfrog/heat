@@ -31,6 +31,8 @@ def train_one_epoch(image_size, backbone, corner_model, edge_model, corner_crite
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = args.print_freq
 
+    
+    # get the positional encodings for all pixels
     pixels, pixel_features = get_pixel_features(image_size)
     pixel_features = pixel_features.cuda()
 
@@ -166,16 +168,16 @@ def main():
     args = parser.parse_args()
     image_size = args.image_size
     if args.exp_dataset == 'outdoor':
-        DATAPATH = './data/cities_dataset'
-        DET_PATH = './data/det_final'
-        train_dataset = OutdoorBuildingDataset(DATAPATH, DET_PATH, phase='train', image_size=image_size, rand_aug=True,
+        data_path = './data/outdoor/cities_dataset'
+        det_path = './data/outdoor/det_final'
+        train_dataset = OutdoorBuildingDataset(data_path, det_path, phase='train', image_size=image_size, rand_aug=True,
                                                inference=False)
-        test_dataset = OutdoorBuildingDataset(DATAPATH, DET_PATH, phase='valid', image_size=image_size, rand_aug=False,
+        test_dataset = OutdoorBuildingDataset(data_path, det_path, phase='valid', image_size=image_size, rand_aug=False,
                                               inference=False)
     elif args.exp_dataset == 's3d_floorplan':
-        DATAPATH = './data/s3d_floorplan'
-        train_dataset = S3DFloorplanDataset(DATAPATH, phase='train', rand_aug=True, inference=False)
-        test_dataset = S3DFloorplanDataset(DATAPATH, phase='valid', rand_aug=False, inference=False)
+        data_path = './data/s3d_floorplan'
+        train_dataset = S3DFloorplanDataset(data_path, phase='train', rand_aug=True, inference=False)
+        test_dataset = S3DFloorplanDataset(data_path, phase='valid', rand_aug=False, inference=False)
     else:
         raise ValueError('Unknown dataset: {}'.format(args.exp_dataset))
 

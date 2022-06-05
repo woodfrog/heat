@@ -20,3 +20,5 @@ scipy==1.6.1
 six==1.15.0
 torch==1.5.1
 torchvision==0.6.1
+cairosvg==2.5.2
+svgwrite==1.4.2

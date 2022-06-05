@@ -3,6 +3,7 @@
 viz/*
 *.tar
 *.pdf
+*.zip
 svg_*
 *.html
 models/ops/build
