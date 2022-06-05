@@ -4,6 +4,8 @@
 
 Official implementation of the paper [HEAT: Holistic Edge Attention Transformer for Structured Reconstruction](https://arxiv.org/abs/2111.15143) (**CVPR 2022**).
 
+[[Project page]](https://heat-structured-reconstruction.github.io/), [[Arxiv]](https://arxiv.org/abs/2111.15143)
+
 Please use the following bib entry to cite the paper if you are using resources from this repo.
 
 ```
@@ -81,13 +83,45 @@ We provide the checkpoints for our full method under [this link](https://drive.g
 
 We provide the instructions to run the inference, quantitative evaluation, and qualitative visualization in this section.
 
-### Inference
+### Outdoor architecture reconstruction
 
-In ```infer.py```, set up the checkpoint path and the corresponding image resolution, then run:
+- Run the inference with the pre-trained checkpoints, with image size 256:
 
-```
-python infer.py
-```
+    ```
+    python infer.py --checkpoint_path ./checkpoints/ckpts_heat_outdoor_256/checkpoint.pth  --dataset outdoor --image_size 256 
+    ```
+
+    or with image size 512:
+
+    ```
+    python infer.py --checkpoint_path ./checkpoints/ckpts_heat_outdoor_512/checkpoint.pth  --dataset outdoor --image_size 512 
+    ```
+
+- The quantitative evaluation for this dataset is included in the inference script. The metric implementations (in ```./metrics```) are borrowed from [Explore-classify[2]](https://zhangfuyang.github.io/expcls/).  
+
+- To get the qualitative visualizations used in our paper, in ```./qualitative_outdoor/visualize_npy.py```, set the paths properly and then run:
+
+    ```
+    cd qualitative_outdoor
+    python visualize_npy.py
+    ```
+
+### Floorplan reconstruction
+
+- Run the inference with the pre-trained checkpoints:
+
+    ```
+    python infer.py --checkpoint_path ./checkpoints/ckpts_heat_s3d_256/checkpoint.pth  --dataset s3d_floorplan --image_size 256 
+    ```
+
+- The quantitative evaluation is again adapted from the code of MonteFloor[1], we thank the authors for sharing the evaluation code. Please first download the data used by MonteFloor with [this link]() (required by evaluation code) and extract it as ```./s3d_floorplan_eval/montefloor_data```. Then run the evaluation by:
+    ```
+    cd s3_floorplan_eval
+    python evaluate_solution.py --dataset_path ./montefloor_data --dataset_type s3d --scene_id val
+    ```
+  Note that we augment the original evaluation code with an algorithm for extracting valid planar graph from our outputs (implemented in ```/s3d_floorplan_eval/planar_graph_utils.py```). Invalid structures including crossing edges or unclosed loops are discarded. The same algorithm is also applied to all our baseline approaches.
+
+- Qualitative visualization
 
 
 ## Training
@@ -104,3 +138,6 @@ With the default setting (e.g., model setup, batch size, etc.), training the ful
 
 ## References
 
+[1]. Stekovic, Sinisa, Mahdi Rad, Friedrich Fraundorfer and Vincent Lepetit. “MonteFloor: Extending MCTS for Reconstructing Accurate Large-Scale Floor Plans.” 2021 IEEE/CVF International Conference on Computer Vision (ICCV) (2021): 16014-16023.
+
+[2]. Zhang, Fuyang, Xiangyu Xu, Nelson Nauata and Yasutaka Furukawa. “Structured Outdoor Architecture Reconstruction by Exploration and Classification.” 2021 IEEE/CVF International Conference on Computer Vision (ICCV) (2021): 12407-12415. 

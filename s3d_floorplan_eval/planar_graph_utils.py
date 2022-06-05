@@ -14,7 +14,6 @@ def extract_regions(adj_mat, corners, corner_sorted):
         regions = _get_regions_for_corner(cur_idx, adj_mat, nb_orders)
         all_regions.extend(regions)
         cur_idx = _get_new_start(adj_mat, cur_idx, corners)
-        # import pdb; pdb.set_trace()
 
     outwall_idx = get_outwall(all_regions, corners, corner_sorted)
     all_regions.pop(outwall_idx)
