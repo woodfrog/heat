@@ -39,7 +39,7 @@ This repo provides the code, data, and pre-trained checkpoints of HEAT for the t
 
 ### Environment
 
-This repo was developed and tested with both ```Python3.7```
+This repo was developed and tested with ```Python3.7```
 
 Install the required packages, and compile the deformable-attention modules (from [deformable-DETR](https://github.com/fundamentalvision/Deformable-DETR))
 
