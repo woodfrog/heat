@@ -15,6 +15,9 @@ def building_metric(logits, label):
 
 
 def edge_acc(logits, label, lengths, gt_values):
+    """
+        edge f1-score for training/validation logging
+    """
     all_acc = list()
     for i in range(logits.shape[0]):
         length = lengths[i]

@@ -5,8 +5,8 @@ from datasets.outdoor_buildings import OutdoorBuildingDataset
 from datasets.s3d_floorplans import S3DFloorplanDataset
 from datasets.data_utils import collate_fn, get_pixel_features
 from models.resnet import ResNetBackbone
-from models.corner_models import CornerEnum
-from models.edge_models import EdgeEnum
+from models.corner_models import HeatCorner
+from models.edge_models import HeatEdge
 from models.corner_to_edge import get_infer_edge_pairs
 from utils.geometry_utils import corner_eval
 import numpy as np
@@ -124,13 +124,13 @@ def main(dataset, ckpt_path, image_size, viz_base, save_base, infer_times):
     backbone = nn.DataParallel(backbone)
     backbone = backbone.cuda()
     backbone.eval()
-    corner_model = CornerEnum(input_dim=128, hidden_dim=256, num_feature_levels=4, backbone_strides=strides,
+    corner_model = HeatCorner(input_dim=128, hidden_dim=256, num_feature_levels=4, backbone_strides=strides,
                               backbone_num_channels=num_channels)
     corner_model = nn.DataParallel(corner_model)
     corner_model = corner_model.cuda()
     corner_model.eval()
 
-    edge_model = EdgeEnum(input_dim=128, hidden_dim=256, num_feature_levels=4, backbone_strides=strides,
+    edge_model = HeatEdge(input_dim=128, hidden_dim=256, num_feature_levels=4, backbone_strides=strides,
                           backbone_num_channels=num_channels)
     edge_model = nn.DataParallel(edge_model)
     edge_model = edge_model.cuda()

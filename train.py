@@ -10,8 +10,8 @@ from arguments import get_args_parser
 from datasets.outdoor_buildings import OutdoorBuildingDataset
 from datasets.s3d_floorplans import S3DFloorplanDataset
 from datasets.data_utils import collate_fn, get_pixel_features
-from models.corner_models import CornerEnum
-from models.edge_models import EdgeEnum
+from models.corner_models import HeatCorner
+from models.edge_models import HeatEdge
 from models.resnet import ResNetBackbone
 from models.loss import CornerCriterion, EdgeCriterion
 from models.corner_to_edge import prepare_edge_data
@@ -189,14 +189,14 @@ def main():
     strides = backbone.strides
     num_channels = backbone.num_channels
 
-    corner_model = CornerEnum(input_dim=128, hidden_dim=256, num_feature_levels=4, backbone_strides=strides,
+    corner_model = HeatCorner(input_dim=128, hidden_dim=256, num_feature_levels=4, backbone_strides=strides,
                               backbone_num_channels=num_channels)
     backbone = nn.DataParallel(backbone)
     backbone = backbone.cuda()
     corner_model = nn.DataParallel(corner_model)
     corner_model = corner_model.cuda()
 
-    edge_model = EdgeEnum(input_dim=128, hidden_dim=256, num_feature_levels=4, backbone_strides=strides,
+    edge_model = HeatEdge(input_dim=128, hidden_dim=256, num_feature_levels=4, backbone_strides=strides,
                           backbone_num_channels=num_channels)
     edge_model = nn.DataParallel(edge_model)
     edge_model = edge_model.cuda()

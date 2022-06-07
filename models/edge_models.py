@@ -12,9 +12,9 @@ import torch.nn.functional as F
 from utils.misc import NestedTensor
 
 
-class EdgeEnum(nn.Module):
+class HeatEdge(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_feature_levels, backbone_strides, backbone_num_channels, ):
-        super(EdgeEnum, self).__init__()
+        super(HeatEdge, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_feature_levels = num_feature_levels
@@ -47,7 +47,6 @@ class EdgeEnum(nn.Module):
         self.edge_input_fc = nn.Linear(input_dim * 2, hidden_dim)
         self.output_fc = MLP(input_dim=hidden_dim, hidden_dim=hidden_dim // 2, output_dim=2, num_layers=2)
 
-        # self.mlm_embedding = nn.Embedding(3, input_dim)
         self.transformer = EdgeTransformer(d_model=hidden_dim, nhead=8, num_encoder_layers=1,
                                            num_decoder_layers=6, dim_feedforward=1024, dropout=0.1)
 
@@ -262,6 +261,9 @@ class EdgeTransformer(nn.Module):
 
     @staticmethod
     def candidate_filtering(logits, hs, query, rp, labels, key_padding_mask, corner_nums, max_candidates):
+        """
+            Filter out the easy-negatives from the edge candidates, and update the edge information correspondingly
+        """
         B, L, _ = hs.shape
         preds = logits.detach().softmax(1)[:, 1, :]  # BxL
         preds[key_padding_mask == True] = -1  # ignore the masking parts
@@ -292,9 +294,11 @@ class EdgeTransformer(nn.Module):
 
         return filtered_hs, filtered_mask, filtered_query, filtered_rp, filtered_labels, selected_ids
 
-
     @staticmethod
     def generate_gt_masking(labels, mask):
+        """
+            Generate the info for masked training on-the-fly with ratio=0.5
+        """
         bs = labels.shape[0]
         gt_values = torch.zeros_like(mask).long()
         for b_i in range(bs):

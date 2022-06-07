@@ -12,9 +12,13 @@ from einops.layers.torch import Rearrange
 from utils.misc import NestedTensor
 
 
-class CornerEnum(nn.Module):
+class HeatCorner(nn.Module):
+    """
+        The corner model of HEAT is the edge model till the edge-filtering part. So only per-candidate prediction w/o
+    relational modeling.
+    """
     def __init__(self, input_dim, hidden_dim, num_feature_levels, backbone_strides, backbone_num_channels, ):
-        super(CornerEnum, self).__init__()
+        super(HeatCorner, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_feature_levels = num_feature_levels
@@ -59,13 +63,11 @@ class CornerEnum(nn.Module):
     @staticmethod
     def get_ms_feat(xs, img_mask):
         out: Dict[str, NestedTensor] = {}
-        # out = list()
         for name, x in sorted(xs.items()):
             m = img_mask
             assert m is not None
             mask = F.interpolate(m[None].float(), size=x.shape[-2:]).to(torch.bool)[0]
             out[name] = NestedTensor(x, mask)
-            # out.append(NestedTensor(x, mask))
         return out
 
     @staticmethod

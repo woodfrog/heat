@@ -115,7 +115,7 @@ We provide the instructions to run the inference, quantitative evaluation, and q
     python infer.py --checkpoint_path ./checkpoints/ckpts_heat_s3d_256/checkpoint.pth  --dataset s3d_floorplan --image_size 256 --viz_base ./results/viz_heat_s3d_256 --save_base ./results/npy_heat_s3d_256 
     ```
 
-- The quantitative evaluation is again adapted from the code of MonteFloor[1], we thank the authors for sharing the evaluation code. Please first download the data used by MonteFloor with [this link]() (required by evaluation code) and extract it as ```./s3d_floorplan_eval/montefloor_data```. Then run the evaluation by:
+- The quantitative evaluation is again adapted from the code of MonteFloor[1], we thank the authors for sharing the evaluation code. Please first download the data used by MonteFloor with [this link](https://drive.google.com/file/d/1XpKm3vjvw4lOw32pX81w0U0YL_PBuzez/view?usp=sharing) (required by evaluation code) and extract it as ```./s3d_floorplan_eval/montefloor_data```. Then run the evaluation by:
     ```
     cd s3_floorplan_eval
     python evaluate_solution.py --dataset_path ./montefloor_data --dataset_type s3d --scene_id val
