@@ -20,11 +20,15 @@ def extract_regions(adj_mat, corners, corner_sorted):
 
     # all_regions = filter_regions(all_regions) # only used for drawing visualization
     # return all_regions
+
     all_regions_coords = [corners[regions] for regions in all_regions]
     return all_regions_coords
 
 
 def get_outwall(all_regions, corners, corner_sorted):
+    """
+        Find the outermost boundary loop, which should be discarded
+    """
     if corner_sorted:
         regions_for_top_bot = np.nonzero([(0 in region and len(corners) - 1 in region) for region in all_regions])[0]
         if len(regions_for_top_bot) == 1:
@@ -67,7 +71,7 @@ def _compute_region_area(region):
 def _get_regions_for_corner(cur_idx, adj_mat, nb_orders):
     regions = list()
     if adj_mat[cur_idx].sum() == 0:
-        assert ValueError('Zero-degree corner, should be happen here')
+        assert ValueError('Zero-degree corner, should not reach here')
     # elif adj_mat[cur_idx].sum() == 1:  # remove the connection if only one neighbour
     #     other_idx = nb_orders[0]
     #     import pdb; pdb.set_trace()

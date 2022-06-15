@@ -129,6 +129,8 @@ We provide the instructions to run the inference, quantitative evaluation, and q
   python visualize_npy.py
   cd ..
   ```
+  Note that the incomplete regions are discarded before the quantitative evaluation. The quantitative metrics from MonteFloor[1] are room-based, and incomplete regions are simply treated as missing rooms. For qualitative visualization, we plot all predicted corners and edges, but only complete (i.e., valid) regions are colored. 
+
 
 
 ## Training
