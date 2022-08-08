@@ -72,7 +72,11 @@ data
     │
     │── ......          # dataset splits, miscs
 ```
-Note that the Structured3D floorplan data is generated with the scripts provided by MonteFloor[1] (see [```s3d_preprocess```](https://github.com/woodfrog/heat/s3d_preprocess) if interested). We thank the authors for kindly sharing the processing scripts, please cite their paper if you use the corresponding resources. 
+Note that the Structured3D floorplan data is generated with the scripts provided by MonteFloor[1]. We thank the authors for kindly sharing the processing scripts, please cite their paper if you use the corresponding resources. 
+
+#### Data preprocessing for floorplan reconstruction (Optional)
+
+All the data used in our paper are provided in the download links above. However, If you are interested in the data preparation process for the floorplan reconstruction task, please refer to the [```s3d_preprocess```](https://github.com/woodfrog/heat/tree/master/s3d_preprocess) directory in which we provide the scripts and a brief doc. 
 
 ### Checkpoints
 
@@ -154,11 +158,6 @@ CUDA_VISIBLE_DEVICES={gpu_ids} python train.py  --exp_dataset s3d_floorplan  --e
 ```
 
 With the default setting (e.g., model setup, batch size, etc.), training the full HEAT (i.e., the end-to-end corner and edge modules) needs at least 2 GPUs with ~16GB memory each. 
-
-
-### Training data preprocessing for floorplan reconstruction (Optional)
-
-All the data used in our paper are provided in the download links above. However, If you are interested in the data preparation process for the floorplan reconstruction task, please refer to the [```s3d_preprocess```](https://github.com/woodfrog/heat/s3d_preprocess) directory in which we provide the scripts and a brief doc. 
 
 
 
