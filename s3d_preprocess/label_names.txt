@@ -1,0 +1,41 @@
+__ignore__
+wall
+floor
+cabinet
+bed
+chair
+sofa
+table
+door
+window
+bookshelf
+picture
+counter
+blinds
+desk
+shelves
+curtain
+dresser
+pillow
+mirror
+floor mat
+clothes
+ceiling
+book
+refridgerator
+television
+paper
+towel
+shower curtain
+box
+whiteboard
+person
+night stand
+toilet
+sink
+lamp
+bathtub
+bag
+otherstructure
+otherfurniture
+otherprop

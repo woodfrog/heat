@@ -1,0 +1,8 @@
+*.tar
+*.zip
+*.png
+.DS_Store
+__pycache__
+s3d_raw
+s3d_floorplan
+montefloor_data

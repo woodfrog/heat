@@ -72,7 +72,7 @@ data
     │
     │── ......          # dataset splits, miscs
 ```
-Note that the Structured3D floorplan data is generated with the scripts provided by MonteFloor[1]. We thank the authors for kindly sharing the processing scripts, please cite their paper if you use the corresponding resources. 
+Note that the Structured3D floorplan data is generated with the scripts provided by MonteFloor[1] (see [```s3d_preprocess```](https://github.com/woodfrog/heat/s3d_preprocess) if interested). We thank the authors for kindly sharing the processing scripts, please cite their paper if you use the corresponding resources. 
 
 ### Checkpoints
 
@@ -85,7 +85,7 @@ We provide the instructions to run the inference, quantitative evaluation, and q
 
 ### Outdoor architecture reconstruction
 
-- Run the inference with the pre-trained checkpoints, with image size 256:
+- **Inference.** Run the inference with the pre-trained checkpoints, with image size 256:
 
     ```
     python infer.py --checkpoint_path ./checkpoints/ckpts_heat_outdoor_256/checkpoint.pth  --dataset outdoor --image_size 256 --viz_base ./results/viz_heat_outdoor_256 --save_base ./results/npy_heat_outdoor_256
@@ -97,9 +97,9 @@ We provide the instructions to run the inference, quantitative evaluation, and q
     python infer.py --checkpoint_path ./checkpoints/ckpts_heat_outdoor_512/checkpoint.pth  --dataset outdoor --image_size 512 --viz_base ./results/viz_heat_outdoor_512 --save_base ./results/npy_heat_outdoor_512
     ```
 
-- The quantitative evaluation for this dataset is included in the inference script. The metric implementations (in ```./metrics```) are borrowed from [Explore-classify[2]](https://zhangfuyang.github.io/expcls/).  
+- **Quantitative evaluation.** The quantitative evaluation for this dataset is included in the inference script. The metric implementations (in ```./metrics```) are borrowed from [Explore-classify[2]](https://zhangfuyang.github.io/expcls/).  
 
-- To get the qualitative visualizations used in our paper, set the paths properly in ```./qualitative_outdoor/visualize_npy.py```, and then run:
+- **Qualitative evaluation.** To get the qualitative visualizations used in our paper, set the paths properly in ```./qualitative_outdoor/visualize_npy.py```, and then run:
 
     ```
     cd qualitative_outdoor
@@ -109,13 +109,13 @@ We provide the instructions to run the inference, quantitative evaluation, and q
 
 ### Floorplan reconstruction
 
-- Run the inference with the pre-trained checkpoints:
+- **Inference.** Run the inference with the pre-trained checkpoints:
 
     ```
     python infer.py --checkpoint_path ./checkpoints/ckpts_heat_s3d_256/checkpoint.pth  --dataset s3d_floorplan --image_size 256 --viz_base ./results/viz_heat_s3d_256 --save_base ./results/npy_heat_s3d_256 
     ```
 
-- The quantitative evaluation is again adapted from the code of MonteFloor[1], we thank the authors for sharing the evaluation code. Please first download the data used by MonteFloor with [this link](https://drive.google.com/file/d/1XpKm3vjvw4lOw32pX81w0U0YL_PBuzez/view?usp=sharing) (required by evaluation code) and extract it as ```./s3d_floorplan_eval/montefloor_data```. Then run the evaluation by:
+- **Quantitative evaluation.** The quantitative evaluation is again adapted from the code of MonteFloor[1], we thank the authors for sharing the evaluation code. Please first download the data used by MonteFloor with [this link](https://drive.google.com/file/d/1XpKm3vjvw4lOw32pX81w0U0YL_PBuzez/view?usp=sharing) (required by evaluation code) and extract it as ```./s3d_floorplan_eval/montefloor_data```. Then run the evaluation by:
     ```
     cd s3_floorplan_eval
     python evaluate_solution.py --dataset_path ./montefloor_data --dataset_type s3d --scene_id val
@@ -123,7 +123,7 @@ We provide the instructions to run the inference, quantitative evaluation, and q
     ```
   Note that we augment the original evaluation code with an algorithm for extracting valid planar graph from our outputs (implemented in ```/s3d_floorplan_eval/planar_graph_utils.py```). Invalid structures including crossing edges or unclosed loops are discarded. The same algorithm is also applied to all our baseline approaches.
 
-- To generate the qualitative visualization results used in the paper, set the paths properly in ```./s3d_floorplan_eval/visualize_npy.py```, and then run:
+- **Qualitative evaluation.** To generate the qualitative visualization results used in the paper, set the paths properly in ```./s3d_floorplan_eval/visualize_npy.py```, and then run:
   ```
   cd s3d_floorplan_eval
   python visualize_npy.py
@@ -154,6 +154,11 @@ CUDA_VISIBLE_DEVICES={gpu_ids} python train.py  --exp_dataset s3d_floorplan  --e
 ```
 
 With the default setting (e.g., model setup, batch size, etc.), training the full HEAT (i.e., the end-to-end corner and edge modules) needs at least 2 GPUs with ~16GB memory each. 
+
+
+### Training data preprocessing for floorplan reconstruction (Optional)
+
+All the data used in our paper are provided in the download links above. However, If you are interested in the data preparation process for the floorplan reconstruction task, please refer to the [```s3d_preprocess```](https://github.com/woodfrog/heat/s3d_preprocess) directory in which we provide the scripts and a brief doc. 
 
 
 
