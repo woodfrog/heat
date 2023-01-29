@@ -37,6 +37,8 @@ This repo provides the code, data, and pre-trained checkpoints of HEAT for the t
 
 ## Preparation
 
+**Note: The code, data, and pre-trained models in this repo are for non-commercial research purposes only, please check the LICENSE file for details.**
+
 ### Environment
 
 This repo was developed and tested with ```Python3.7```
