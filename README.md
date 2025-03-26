@@ -54,7 +54,7 @@ cd ...
 
 ### Data
 
-Please download the data for the two tasks from the [link](https://drive.google.com/file/d/1BL58xl2U8H96YBkkB7WjDmtznuEj6PbG/view?usp=sharing) here.  Extract the data into the ```./data``` directory.
+Please download the data for the two tasks from the [link](https://www.dropbox.com/scl/fi/260bvg0yxhqgoed7m3oxe/heat_data.zip?rlkey=imnpt9cl4rs0sxfb3oxoofsom&st=3zblo6bl&dl=0) here.  Extract the data into the ```./data``` directory.
 
 The file structure should be like the following:
 ```
@@ -82,7 +82,7 @@ All the data used in our paper are provided in the download links above. However
 
 ### Checkpoints
 
-We provide the checkpoints for our full method under [this link](https://drive.google.com/file/d/1Oua4RCaxOIm7-mWXoUJZHTNE3oSPrDTw/view?usp=sharing), please download and extract.
+We provide the checkpoints for our full method under [this link](https://www.dropbox.com/scl/fi/57kxrtdwma8h9m2osnjn5/heat_checkpoints.zip?rlkey=77cso90mi4aroj4wpbh0w2tiv&st=k1oi772j&dl=0), please download and extract.
 
 
 ## Inference, evaluation, and visualization
@@ -121,7 +121,7 @@ We provide the instructions to run the inference, quantitative evaluation, and q
     python infer.py --checkpoint_path ./checkpoints/ckpts_heat_s3d_256/checkpoint.pth  --dataset s3d_floorplan --image_size 256 --viz_base ./results/viz_heat_s3d_256 --save_base ./results/npy_heat_s3d_256 
     ```
 
-- **Quantitative evaluation.** The quantitative evaluation is again adapted from the code of MonteFloor[1], we thank the authors for sharing the evaluation code. Please first download the data used by MonteFloor with [this link](https://drive.google.com/file/d/1XpKm3vjvw4lOw32pX81w0U0YL_PBuzez/view?usp=sharing) (required by evaluation code) and extract it as ```./s3d_floorplan_eval/montefloor_data```. Then run the evaluation by:
+- **Quantitative evaluation.** The quantitative evaluation is again adapted from the code of MonteFloor[1], we thank the authors for sharing the evaluation code. Please first download the data used by MonteFloor with [this link](https://www.dropbox.com/scl/fi/ngkcjsuywqscd6tgw22z4/montefloor_data_all.zip?rlkey=3xb2vzisui3lvedbv8b5whvrg&st=yq6jo694&dl=0) (required by evaluation code) and extract it as ```./s3d_floorplan_eval/montefloor_data```. Then run the evaluation by:
     ```
     cd s3_floorplan_eval
     python evaluate_solution.py --dataset_path ./montefloor_data --dataset_type s3d --scene_id val
